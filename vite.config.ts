@@ -9,8 +9,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Deployed to GitHub Pages under a repo subpath, so production assets are served
 // from `/albion-adventure-land/`. The dev server stays at root. Override the
 // build base with BASE_PATH if the repo (and therefore the Pages URL) is renamed.
+// Note: the path is case-sensitive and must match the repo name exactly.
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? process.env.BASE_PATH ?? '/albion-adventure-land/' : '/',
+  base: command === 'build' ? process.env.BASE_PATH ?? '/Albion-Adventure-Land/' : '/',
   plugins: [
     react(),
     VitePWA({
