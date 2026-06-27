@@ -32,7 +32,7 @@ Early / pre-implementation. The design is settled; code is being built in phases
 
 | Phase | Scope | State |
 |---|---|---|
-| 1 — MVP | Ingest · map · type filter · near-me (haversine) · visited/wishlist · stats · directions handoff · offline | Not started |
+| 1 — MVP | Ingest · map · type filter · near-me (haversine) · visited/wishlist · stats · directions handoff · offline | Built |
 | 2 — Accurate & personal | Road travel-time sort · condition filters · site detail with note + photo | Not started |
 | 3 — Outing mode | Clustering (DBSCAN) · routing (NN + 2-opt) · rarity-weighted subset selection · multi-stop handoff | Not started |
 
@@ -65,5 +65,21 @@ navigation is delegated to Google Maps via deep links. No backend.
 
 ## Getting started
 
-Project scaffolding is not in place yet. Once the Vite app lands, the usual
-`npm install` / `npm run dev` will apply; this section will be filled in then.
+```bash
+npm install
+npm run ingest   # CSV → public/data/sites.json (re-run when the CSV changes)
+npm run dev      # dev server
+npm run build    # ingest + typecheck + production PWA build
+npm run preview  # serve the production build
+```
+
+`npm run dev` opens the app: a Leaflet map of all sites coloured by type, a
+bottom sheet with **Near me** (haversine-sorted), **Filters** (type toggles), and
+**Stats** (completion %, per-type/county breakdown, rarest-unvisited nudge). Tap a
+pin or list row for the site card — mark visited/wishlist or hand off to Google
+Maps directions. If GPS is denied, use the 📍 button on the map to drop a manual
+"I am here" pin. Visited/wishlist state persists in IndexedDB and survives
+offline and reload.
+
+> Tiles use keyless OSM raster for now; swap in a keyed provider (MapTiler /
+> Thunderforest) in `src/map/MapView.tsx` for outdoor/topo styles.

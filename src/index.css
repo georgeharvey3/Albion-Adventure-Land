@@ -1,0 +1,384 @@
+:root {
+  --bg: #f7f5f0;
+  --ink: #23201b;
+  --muted: #6b6459;
+  --line: #e2ddd2;
+  --accent: #1f6b4f;
+  --accent-ink: #fff;
+  --card: #fffdf8;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Map fills the space above the bottom sheet. */
+.map {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #aadaff;
+}
+
+.drop-pin-btn {
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  line-height: 1;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.drop-pin-btn.active {
+  background: #ffe8d6;
+  border-color: #e76f51;
+}
+
+/* Bottom sheet */
+.sheet {
+  flex: 0 0 auto;
+  max-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  z-index: 500;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab.active {
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.sheet-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 12px 16px;
+}
+
+.hint {
+  margin: 6px 2px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Near-me list */
+.list ul,
+.filters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.row.selected {
+  background: #eef5f1;
+}
+.row.is-visited .row-name {
+  color: var(--muted);
+}
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.row-name {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.row-dist {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.dot {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Pub map markers use an L.divIcon square; strip Leaflet's default white box. */
+.pub-marker {
+  background: transparent;
+  border: none;
+}
+
+/* Filters */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 6px 6px 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.chip.off {
+  opacity: 0.4;
+}
+.chip-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two-level filter layout: prominent layer switch + subcategory chips */
+.layer {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink);
+}
+.layer-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+.layer-toggle.off .layer-name {
+  color: var(--muted);
+}
+.layer-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* iOS-style switch — the primary affordance for each major layer */
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--line);
+  transition: background 0.15s ease;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+.layer-toggle.on .switch {
+  background: var(--accent);
+}
+.layer-toggle.on .switch::after {
+  transform: translateX(18px);
+}
+.layer-toggle.mixed .switch {
+  background: #9bbcae;
+}
+.layer-toggle.mixed .switch::after {
+  transform: translateX(9px);
+}
+.layer-subs {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px 12px 6px;
+  border-top: 1px solid var(--line);
+}
+
+/* Selected-site card */
+.card {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(45vh + 8px);
+  z-index: 600;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.card-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+.card-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.card-title {
+  margin: 4px 0 8px;
+  font-size: 19px;
+  padding-right: 24px;
+}
+.card-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0;
+}
+.card-desc {
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 8px 0;
+}
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin: 2px 6px 6px 0;
+}
+.badge.visited {
+  background: #e3f0e9;
+  color: var(--accent);
+}
+.badge.wish {
+  background: #fff0e0;
+  color: #b5651d;
+}
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.btn {
+  flex: 1 1 auto;
+  text-align: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Overlays */
+.overlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 700;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.overlay.error {
+  background: #fde8e8;
+  border-color: #f5b5b5;
+}
+
+@media (min-width: 760px) {
+  .sheet {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 380px;
+    max-height: none;
+    border-top: none;
+    border-left: 1px solid var(--line);
+  }
+  .app {
+    flex-direction: row;
+  }
+  .card {
+    left: auto;
+    right: 396px;
+    bottom: 16px;
+    width: 360px;
+  }
+}

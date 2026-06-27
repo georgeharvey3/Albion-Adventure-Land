@@ -1,0 +1,143 @@
+// Normalized, read-only site model (spec §5.1). Site data is replaceable;
+// user state (in IndexedDB) is keyed on the stable `id` and must never be lost.
+
+// `SiteCategory` is the *leaf* type — what drives pin colour, filter chips,
+// rarity and stats. Folklore leaves come from the source CSV's `category` column
+// (slugified). `historic_pubs` is a leaf that has no finer subdivision: for pubs
+// the leaf and its parent are one and the same. Keep this union in sync with the
+// categories the data carries.
+export type SiteCategory =
+  | 'wells'
+  | 'natural_water_features'
+  | 'wild_places'
+  | 'hills'
+  | 'hillforts'
+  | 'earthworks'
+  | 'burial_chambers'
+  | 'standing_stones'
+  | 'stone_circles'
+  | 'natural_stones'
+  | 'sacred_buildings'
+  | 'caves'
+  | 'other'
+  | 'historic_pubs';
+
+export const SITE_TYPES: SiteCategory[] = [
+  'wells',
+  'natural_water_features',
+  'wild_places',
+  'hills',
+  'hillforts',
+  'earthworks',
+  'burial_chambers',
+  'standing_stones',
+  'stone_circles',
+  'natural_stones',
+  'sacred_buildings',
+  'caves',
+  'other',
+  'historic_pubs',
+];
+
+// Top-level grouping over leaf categories (spec: two-level taxonomy). The filter
+// UI groups leaves by parent — Folklore expands to its 13 subcategories; Historic
+// pubs is a single leaf shown on its own. Parent is DERIVED from category (like
+// rarity), never stored on a Site, so user state can't depend on it.
+export type ParentCategory = 'folklore' | 'historic_pubs';
+
+export const PARENT_CATEGORIES: ParentCategory[] = ['folklore', 'historic_pubs'];
+
+export const PARENT_CATEGORY_LABELS: Record<ParentCategory, string> = {
+  folklore: 'Folklore',
+  historic_pubs: 'Historic pubs',
+};
+
+export const CATEGORY_PARENT: Record<SiteCategory, ParentCategory> = {
+  wells: 'folklore',
+  natural_water_features: 'folklore',
+  wild_places: 'folklore',
+  hills: 'folklore',
+  hillforts: 'folklore',
+  earthworks: 'folklore',
+  burial_chambers: 'folklore',
+  standing_stones: 'folklore',
+  stone_circles: 'folklore',
+  natural_stones: 'folklore',
+  sacred_buildings: 'folklore',
+  caves: 'folklore',
+  other: 'folklore',
+  historic_pubs: 'historic_pubs',
+};
+
+export function parentOf(category: SiteCategory): ParentCategory {
+  return CATEGORY_PARENT[category];
+}
+
+export const SITE_TYPE_LABELS: Record<SiteCategory, string> = {
+  wells: 'Wells',
+  natural_water_features: 'Natural water features',
+  wild_places: 'Wild places',
+  hills: 'Hills',
+  hillforts: 'Hillforts',
+  earthworks: 'Earthworks',
+  burial_chambers: 'Burial chambers',
+  standing_stones: 'Standing stones',
+  stone_circles: 'Stone circles',
+  natural_stones: 'Natural stones',
+  sacred_buildings: 'Sacred buildings',
+  caves: 'Caves',
+  other: 'Other',
+  historic_pubs: 'Historic pubs',
+};
+
+// Distinct, colour-blind-friendly-ish palette for map pins and list dots.
+export const SITE_TYPE_COLORS: Record<SiteCategory, string> = {
+  wells: '#2a9d8f',
+  natural_water_features: '#0077b6',
+  wild_places: '#43aa8b',
+  hills: '#8a5a44',
+  hillforts: '#bc6c25',
+  earthworks: '#b08968',
+  burial_chambers: '#577590',
+  standing_stones: '#6a4c93',
+  stone_circles: '#e76f51',
+  natural_stones: '#9a8c98',
+  sacred_buildings: '#c9184a',
+  caves: '#3d405b',
+  other: '#6c757d',
+  historic_pubs: '#d4a017', // amber — distinct from every folklore hue
+};
+
+const SITE_TYPE_SET: ReadonlySet<string> = new Set(SITE_TYPES);
+
+// Normalize a raw CSV `category` value to a SiteType. The category vocabulary is
+// authoritative now (no keyword guessing); anything blank or unrecognised falls
+// back to 'other'.
+export function normalizeCategory(raw: string | undefined): SiteCategory {
+  const slug = (raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return SITE_TYPE_SET.has(slug) ? (slug as SiteCategory) : 'other';
+}
+
+export interface Site {
+  id: string; // stable, derived: slug(name)+rounded(lat,lng)
+  name: string;
+  lat: number; // WGS84
+  lng: number; // WGS84
+  description?: string;
+  county?: string; // region/area from the source
+  postcode?: string; // present for sources keyed on postcode (e.g. pubs); used for the Maps query and the stable id
+  source: string; // which CSV / guidebook this came from
+  category: SiteCategory
+
+  // Condition / access metadata (optional, sparse in practice).
+  access?: string;
+  tideDependent?: boolean;
+  seasonal?: boolean;
+  needsWalk?: boolean;
+  cost?: 'free' | 'paid';
+  openingHours?: string;
+}
