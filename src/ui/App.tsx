@@ -14,6 +14,20 @@ export function App() {
   const dataError = useStore((s) => s.dataError);
   const selectedSiteId = useStore((s) => s.selectedSiteId);
   const [tab, setTab] = useState<Tab>('filters');
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Tapping a tab while collapsed expands the sheet to that tab; tapping the
+  // active tab toggles collapse. Keeps the map fully visible on small screens.
+  const selectTab = (next: Tab) => {
+    if (collapsed) {
+      setCollapsed(false);
+      setTab(next);
+    } else if (next === tab) {
+      setCollapsed(true);
+    } else {
+      setTab(next);
+    }
+  };
 
   useEffect(() => {
     void init();
@@ -34,22 +48,36 @@ export function App() {
 
       {selectedSiteId && <SiteDetail />}
 
-      <div className="sheet">
+      <div className={collapsed ? 'sheet collapsed' : 'sheet'}>
         <nav className="tabs">
-          <button className={tab === 'near' ? 'tab active' : 'tab'} onClick={() => setTab('near')}>
+          <button
+            className={!collapsed && tab === 'near' ? 'tab active' : 'tab'}
+            onClick={() => selectTab('near')}
+          >
             Near me
           </button>
           <button
-            className={tab === 'filters' ? 'tab active' : 'tab'}
-            onClick={() => setTab('filters')}
+            className={!collapsed && tab === 'filters' ? 'tab active' : 'tab'}
+            onClick={() => selectTab('filters')}
           >
             Filters
           </button>
+          <button
+            className="tab collapse-toggle"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+            title={collapsed ? 'Expand panel' : 'Collapse panel'}
+          >
+            {collapsed ? '▲' : '▼'}
+          </button>
         </nav>
-        <div className="sheet-body">
-          {tab === 'near' && <NearMeList />}
-          {tab === 'filters' && <Filters />}
-        </div>
+        {!collapsed && (
+          <div className="sheet-body">
+            {tab === 'near' && <NearMeList />}
+            {tab === 'filters' && <Filters />}
+          </div>
+        )}
       </div>
     </div>
   );

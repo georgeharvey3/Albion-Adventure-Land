@@ -57,6 +57,22 @@ export function Filters() {
 
             {hasSubs && (
               <div className="layer-subs">
+                <div className="subs-controls">
+                  <button
+                    className="link-btn"
+                    onClick={() => setTypesActive(leaves, true)}
+                    disabled={allOn}
+                  >
+                    Select all
+                  </button>
+                  <button
+                    className="link-btn"
+                    onClick={() => setTypesActive(leaves, false)}
+                    disabled={noneOn}
+                  >
+                    Deselect all
+                  </button>
+                </div>
                 {leaves.map((type) => {
                   const on = activeTypes.has(type);
                   return (
