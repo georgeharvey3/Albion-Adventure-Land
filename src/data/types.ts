@@ -7,6 +7,7 @@
 // the leaf and its parent are one and the same. Keep this union in sync with the
 // categories the data carries.
 export type SiteCategory =
+  | 'historic_pubs'
   | 'wells'
   | 'natural_water_features'
   | 'wild_places'
@@ -19,10 +20,10 @@ export type SiteCategory =
   | 'natural_stones'
   | 'sacred_buildings'
   | 'caves'
-  | 'other'
-  | 'historic_pubs';
+  | 'other';
 
 export const SITE_TYPES: SiteCategory[] = [
+  'historic_pubs',
   'wells',
   'natural_water_features',
   'wild_places',
@@ -35,8 +36,7 @@ export const SITE_TYPES: SiteCategory[] = [
   'natural_stones',
   'sacred_buildings',
   'caves',
-  'other',
-  'historic_pubs',
+  'other'
 ];
 
 // Top-level grouping over leaf categories (spec: two-level taxonomy). The filter
@@ -45,11 +45,11 @@ export const SITE_TYPES: SiteCategory[] = [
 // rarity), never stored on a Site, so user state can't depend on it.
 export type ParentCategory = 'folklore' | 'historic_pubs';
 
-export const PARENT_CATEGORIES: ParentCategory[] = ['folklore', 'historic_pubs'];
+export const PARENT_CATEGORIES: ParentCategory[] = ['historic_pubs', 'folklore'];
 
 export const PARENT_CATEGORY_LABELS: Record<ParentCategory, string> = {
-  folklore: 'Folklore',
   historic_pubs: 'Historic pubs',
+  folklore: 'Folklore',
 };
 
 export const CATEGORY_PARENT: Record<SiteCategory, ParentCategory> = {
@@ -131,7 +131,18 @@ export interface Site {
   county?: string; // region/area from the source
   postcode?: string; // present for sources keyed on postcode (e.g. pubs); used for the Maps query and the stable id
   source: string; // which CSV / guidebook this came from
+  sourceUrl?: string; // canonical page this site/description came from (e.g. CAMRA pub page); shown as attribution
   category: SiteCategory
+
+  // Listing grouping (spec: a `listing` groups a `main` point with its
+  // trailheads/nearby features). DERIVED from the source's listing columns at
+  // ingest, like rarity/parent — never user state. `listingId` is shared by every
+  // collectible point in the listing; `parentId` points a sub-feature back at the
+  // listing's `main` point (undefined on the main point itself). Lets the detail
+  // card link a sub-point to its full write-up and list a main point's features.
+  listingId?: string;
+  listingTitle?: string; // the curated listing label (CSV `listing_title`)
+  parentId?: string; // stable id of the listing's `main` point
 
   // Condition / access metadata (optional, sparse in practice).
   access?: string;

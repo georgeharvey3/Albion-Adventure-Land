@@ -15,6 +15,17 @@ export function directionsToSite(site: Site, origin?: { lat: number; lng: number
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
+/**
+ * Place-lookup handoff — opens the site's Google Maps *listing* (photos,
+ * reviews, hours, website) rather than routing to it. Postcode-keyed sites
+ * (pubs) are queried by name + postcode, which lands on the right listing
+ * reliably; this is how a sparse pub row borrows Google's rich place data.
+ */
+export function placeLink(site: Site & { postcode: string }): string {
+  const params = new URLSearchParams({ api: '1', query: `${site.name} ${site.postcode}` });
+  return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
 const MAX_WAYPOINTS = 9; // consumer URL cap (verify before relying on it — spec §8)
 
 /** Multi-stop route. `ordered` is [start, ...vias, end]. Throws if too many vias. */

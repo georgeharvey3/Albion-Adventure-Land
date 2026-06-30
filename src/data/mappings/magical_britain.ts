@@ -22,6 +22,8 @@ export interface SourceMapping {
     county?: string;
     access?: string;
     role?: string; // structural point_type column
+    listingNo?: string; // groups a main point with its sub-features
+    listingTitle?: string; // curated label for the listing
     [k: string]: string | undefined;
   };
   // Structural roles that represent a collectible destination. Other roles
@@ -44,6 +46,8 @@ export const magicalBritainMapping: SourceMapping = {
     county: 'region',
     access: 'access_notes',
     role: 'point_type',
+    listingNo: 'listing_no',
+    listingTitle: 'listing_title',
     category: 'category'
   },
   collectibleRoles: ['main', 'nearby_feature'],

@@ -92,6 +92,14 @@ export function mapRow(row: RawRow, mapping: SourceMapping): Site | RejectedRow 
   const access = col(row, mapping.columns.access) || undefined;
   const category = normalizeCategory(col(row, mapping.columns.category));
 
+  // Listing grouping (derived). `listingId` keys every collectible point in the
+  // listing; built from region + listing number so it's stable across re-imports.
+  // `parentId` is resolved in a second pass in ingest(), once the main point's id
+  // for each listing is known.
+  const listingNo = col(row, mapping.columns.listingNo);
+  const listingId = listingNo ? `${slug(county ?? '')}__l${listingNo}` : undefined;
+  const listingTitle = listingId ? col(row, mapping.columns.listingTitle) || undefined : undefined;
+
   return {
     id: makeId(name, lat, lng),
     name,
@@ -102,15 +110,17 @@ export function mapRow(row: RawRow, mapping: SourceMapping): Site | RejectedRow 
     source: mapping.source,
     access,
     category,
+    ...(listingId ? { listingId, listingTitle } : {}),
   };
 }
 
 export function ingest(rows: RawRow[], mapping: SourceMapping): IngestResult {
-  const sites: Site[] = [];
   const rejected: RejectedRow[] = [];
-  const seen = new Set<string>();
   let skippedNonCollectible = 0;
 
+  // Pass 1: map every collectible row, remembering its structural role so the
+  // listing's `main` point can be identified afterwards.
+  const entries: { site: Site; role: string }[] = [];
   for (const row of rows) {
     if (isExcluded(row, mapping)) {
       skippedNonCollectible++;
@@ -128,11 +138,27 @@ export function ingest(rows: RawRow[], mapping: SourceMapping): IngestResult {
       rejected.push(mapped);
       continue;
     }
-    if (seen.has(mapped.id)) {
+    entries.push({ site: mapped, role });
+  }
+
+  // Resolve the `main` point's stable id for each listing, so sub-features can
+  // link back to the full write-up (and a main can list its features).
+  const mainIdByListing = new Map<string, string>();
+  for (const { site, role } of entries) {
+    if (role === 'main' && site.listingId) mainIdByListing.set(site.listingId, site.id);
+  }
+
+  // Pass 2: attach parentId (only to non-main points whose listing has a main)
+  // and dedupe by stable id.
+  const sites: Site[] = [];
+  const seen = new Set<string>();
+  for (const { site } of entries) {
+    if (seen.has(site.id)) {
       continue; // dedupe by stable id
     }
-    seen.add(mapped.id);
-    sites.push(mapped);
+    seen.add(site.id);
+    const mainId = site.listingId ? mainIdByListing.get(site.listingId) : undefined;
+    sites.push(mainId && mainId !== site.id ? { ...site, parentId: mainId } : site);
   }
 
   return { sites, rejected, skippedNonCollectible };
@@ -148,7 +174,19 @@ export interface Coords {
 /** Resolves a postcode to coordinates, or null if it can't be geocoded. */
 export type Geocoder = (postcode: string) => Coords | null;
 
-export function mapPubRow(row: RawRow, mapping: SourceMapping, geocode: Geocoder): Site | RejectedRow {
+/** Build-time enrichment for a pub (scraped once, cached, baked into JSON).
+ *  Keyed by the stable pub id so it survives re-geocoding. See scripts/scrape-camra.ts. */
+export interface PubEnrichment {
+  description?: string;
+  sourceUrl?: string;
+}
+
+export function mapPubRow(
+  row: RawRow,
+  mapping: SourceMapping,
+  geocode: Geocoder,
+  enrich?: Record<string, PubEnrichment>,
+): Site | RejectedRow {
   const name = col(row, mapping.columns.name);
   if (!name) {
     return { row, reason: 'missing name' };
@@ -170,18 +208,27 @@ export function mapPubRow(row: RawRow, mapping: SourceMapping, geocode: Geocoder
     return { row, reason: `geocoded coords out of UK range (${coords.lat},${coords.lng}) for "${postcode}"` };
   }
 
+  const id = makePubId(name, postcode);
+  const extra = enrich?.[id];
   return {
-    id: makePubId(name, postcode),
+    id,
     name,
     lat: coords.lat,
     lng: coords.lng,
     postcode,
     source: mapping.source,
     category: 'historic_pubs',
+    ...(extra?.description ? { description: extra.description } : {}),
+    ...(extra?.sourceUrl ? { sourceUrl: extra.sourceUrl } : {}),
   };
 }
 
-export function ingestPubs(rows: RawRow[], mapping: SourceMapping, geocode: Geocoder): IngestResult {
+export function ingestPubs(
+  rows: RawRow[],
+  mapping: SourceMapping,
+  geocode: Geocoder,
+  enrich?: Record<string, PubEnrichment>,
+): IngestResult {
   const sites: Site[] = [];
   const rejected: RejectedRow[] = [];
   const seen = new Set<string>();
@@ -193,7 +240,7 @@ export function ingestPubs(rows: RawRow[], mapping: SourceMapping, geocode: Geoc
       continue;
     }
 
-    const mapped = mapPubRow(row, mapping, geocode);
+    const mapped = mapPubRow(row, mapping, geocode, enrich);
     if ('reason' in mapped) {
       rejected.push(mapped);
       continue;

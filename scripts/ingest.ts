@@ -1,8 +1,8 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Papa from 'papaparse';
-import { ingest, ingestPubs, type Geocoder, type RawRow } from '../src/data/ingest.ts';
+import { ingest, ingestPubs, type Geocoder, type RawRow, type PubEnrichment } from '../src/data/ingest.ts';
 import { magicalBritainMapping, type SourceMapping } from '../src/data/mappings/magical_britain.ts';
 import { camraMapping } from '../src/data/mappings/camra.ts';
 import { geocodePostcodes, normalizePostcode } from './geocode.ts';
@@ -48,11 +48,24 @@ async function buildGeocoder(rows: RawRow[], mapping: SourceMapping): Promise<Ge
   return (postcode: string) => resolved.get(normalizePostcode(postcode)) ?? null;
 }
 
+// Optional pub enrichment (descriptions + source links) scraped by
+// scripts/scrape-camra.ts. Absent on a fresh checkout — pubs just stay sparse
+// until `npm run scrape:camra` is run, so the build never depends on it.
+function loadPubEnrichment(): Record<string, PubEnrichment> {
+  const file = resolve(root, 'data/camra-descriptions.json');
+  if (!existsSync(file)) {
+    console.log('  (no data/camra-descriptions.json — run `npm run scrape:camra` to enrich pubs)');
+    return {};
+  }
+  return JSON.parse(readFileSync(file, 'utf8')) as Record<string, PubEnrichment>;
+}
+
 async function main(): Promise<void> {
   const allSites: Site[] = [];
   const seen = new Set<string>();
   let totalRejected = 0;
   let totalSkipped = 0;
+  const pubEnrichment = loadPubEnrichment();
 
   for (const { csv, mapping } of SOURCES) {
     console.log(`\nIngesting ${csv} …`);
@@ -60,7 +73,7 @@ async function main(): Promise<void> {
     const rows = parseCsv(text);
     const { sites, rejected, skippedNonCollectible } =
       mapping.coords === 'geocode_postcode'
-        ? ingestPubs(rows, mapping, await buildGeocoder(rows, mapping))
+        ? ingestPubs(rows, mapping, await buildGeocoder(rows, mapping), pubEnrichment)
         : ingest(rows, mapping);
 
     for (const s of sites) {
